@@ -10,52 +10,66 @@ namespace SampleApp
     {
         static void Main(string[] args)
         {
-            var list = new List<Item>();
-            var lines = File.ReadAllLines("data.csv");
-            foreach (var line in lines)
-            {
-                var s = line.Split(',');
-                var item = new Item();
-                item.Name = s[0];
-                item.Category = s[1];
-                item.Quantity = int.Parse(s[2]);
-                item.Location = s[3];
-                item.Type = s[4];
-                list.Add(item);
-            }
+            try{
+                var list = new List<Item>();
+                var extractItemList = new List<Item>();
+                var lines = File.ReadAllLines("data.csv");
+                var output = string.Empty;
+                string[] condition = {"A","B","Z"};
 
-            var result = new List<Item>();
-            foreach (var item in list)
-            {
-                if (item.Type == "A" || item.Type == "B" || item.Type == "Z")
+                foreach (var line in lines)
                 {
-                    if (!item.Name.Contains("テスト") && item.Quantity > 0)
+                    var s = line.Split(',');
+                    int quantity;
+                    if(int.TryParse(s[2], out quantity))
                     {
-                        result.Add(item);
+                        var item = new Item(s[0], s[1], quantity, s[3], s[4]);
+                        list.Add(item);
+                    }
+                    else
+                    {
+                        Console.WriteLine("数量の値が不正");
                     }
                 }
+
+                // LINQで条件抽出
+                extractItemList = list.Where(x => condition.Contains(item.type)).Where(y => !item.Name.Contains("テスト")).Where(z => z.Quantity > 0).ToList();
+                StringBuilder sb = new StringBuilder();
+
+                foreach(var item in extractItemList){
+                    sb.Append(item.Name);
+                    sb.Append(string.Join(",", item.Category));
+                    sb.Append(string.Join(",", item.Quantity.ToString()))
+                }
+
+                var dt = DateTime.Now.ToString("yyyyMMddHHmmss");
+                var filename = "output_" + dt + ".csv";
+                File.WriteAllText(filename, output);
+
+                Console.WriteLine("Done.");
             }
+            catch(Exception ex){
 
-            var output = "";
-            foreach (var item in result)
-            {
-                output += item.Name + "," + item.Category + "," + item.Quantity + Environment.NewLine;
             }
-
-            var dt = DateTime.Now.ToString("yyyyMMddHHmmss");
-            var filename = "output_" + dt + ".csv";
-            File.WriteAllText(filename, output);
-
-            Console.WriteLine("Done.");
+            
         }
 
         class Item
         {
-            public string Name;
-            public string Category;
-            public int Quantity;
-            public string Location;
-            public string Type;
+            public string Name {get; set;};
+            public string Category {get; set;};
+            public int Quantity {get; set;};
+            public string Location {get; set;};
+            public string Type {get; set;};
+
+            public Item(string name, string category, int quantity, string location, string type)
+            {
+                this.Name = name;
+                this.Category = category;
+                this.Quantity = quantity;
+                this.Location = location;
+                this.Type = type;
+            }
         }
     }
 }
