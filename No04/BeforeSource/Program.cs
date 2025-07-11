@@ -3,16 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace SampleApp
 {
     class Item
     {
-        public string Name {get; set;};
-        public string Category {get; set;};
-        public int Quantity {get; set;};
-        public string Location {get; set;};
-        public string Type {get; set;};
+        public string Name {get; set;}
+        public string Category {get; set;}
+        public int Quantity {get; set;}
+        public string Location {get; set;}
+        public string Type {get; set;}
 
         public Item(string name, string category, int quantity, string location, string type)
         {
@@ -56,7 +57,7 @@ namespace SampleApp
                 }
 
                 // LINQで条件抽出
-                extractItemList = list.Where(x => condition.Contains(item.type)).Where(y => !item.Name.Contains("テスト")).Where(z => z.Quantity > 0).ToList();
+                extractItemList = list.Where(item => condition.Contains(item.Type)).Where(item => !item.Name.Contains("テスト")).Where(item => item.Quantity > 0).ToList();
                 
                 // 文字列結合
                 StringBuilder sb = new StringBuilder();
