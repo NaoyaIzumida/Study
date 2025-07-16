@@ -27,56 +27,122 @@ namespace SampleApp
 
     class Program
     {
+        public const string CSV_FILE_PATH = @"data.csv";
+        public const string OUTPUT_FILE_NAME = "output_{0}.csv";
+        public const string DATETIME_FORMAT = "yyyyMMddHHmmss";
+        public const int ELEMENT_LENGTH = 5;
+        public const string EXCLUDE_NAME = "テスト";
+        public static readonly string[] TYPE_CONDITION = {"A","B","Z" };
+
         static void Main(string[] args)
         {
-            try{
-                var list = new List<Item>();
-                var extractItemList = new List<Item>();
-                // 読み込み時のエラー(ファイルの存在チェック)
-                var lines = File.ReadAllLines("data.csv");
-                var output = string.Empty;
-                string[] condition = {"A","B","Z"};
+            List<Item> list = new List<Item>();
+            List<Item> extractItemList = new List<Item>();
+            string output = string.Empty;
 
-                // 行データからアイテムリストを作成
-                foreach (var line in lines)
+            // ファイル読み込み処理
+            string[]? lines = ReadCsvFile(CSV_FILE_PATH);
+            if (lines == null)
+            {
+                return;
+            }
+
+            // アイテムリストを作成
+            foreach (var line in lines.Select((value, index) => new { value, index }))
+            {
+                string[] element = line.value.Split(',');
+                int quantity;
+
+                if (element.Length == ELEMENT_LENGTH)
                 {
-                    var s = line.Split(',');
-                    int quantity;
-                    // parse時のエラー 解決済
-                    if(int.TryParse(s[2], out quantity))
+                    if (int.TryParse(element[2], out quantity))
                     {
-                        // CSVデータは要素数チェック(足りない場合は処理を中断)
-                        var item = new Item(s[0], s[1], quantity, s[3], s[4]);
+                        Item item = new Item(element[0], element[1], quantity, element[3], element[4]);
                         list.Add(item);
                     }
                     else
                     {
-                        //　処理スキップするか中断するか続行するか
-                        Console.WriteLine($"{s[0]}の数量が不正");
+                        //　数量が異常値の場合はスキップ
+                        Console.WriteLine($"{line.index + 1}行目の数量が不正のためスキップしました。");
                     }
                 }
-
-                // LINQで条件抽出
-                extractItemList = list.Where(item => condition.Contains(item.Type)).Where(item => !item.Name.Contains("テスト")).Where(item => item.Quantity > 0).ToList();
-                
-                // 文字列結合
-                StringBuilder sb = new StringBuilder();
-                foreach(var item in extractItemList){
-                    sb.Append(item.Name);
-                    sb.Append(string.Join(",", item.Category));
-                    sb.AppendLine(string.Join(",", item.Quantity.ToString()));
+                else
+                {
+                    // csv要素数が異常値の場合はスキップ
+                    Console.WriteLine($"{line.index + 1}行目の要素数が不正のためスキップしました。");
                 }
-
-                // 出力
-                var dt = DateTime.Now.ToString("yyyyMMddHHmmss");
-                var filename = "output_" + dt + ".csv";
-                // 書き込み時のエラー(書き込み権限チェック)
-                File.WriteAllText(filename, output);
-
-                Console.WriteLine("Done.");
             }
-            catch(Exception ex){
 
+            // 条件に合うItemの抽出
+            extractItemList = list.Where(item => TYPE_CONDITION.Contains(item.Type)).Where(item => !item.Name.Contains(EXCLUDE_NAME)).Where(item => item.Quantity > 0).ToList();
+                
+            StringBuilder sb = new StringBuilder();
+            foreach(var item in extractItemList){
+                sb.AppendLine(string.Join(",", item.Name, item.Category, item.Quantity, item.Location, item.Type));
+            }
+            output = sb.ToString();
+
+            //　出力処理
+            string dt = DateTime.Now.ToString(DATETIME_FORMAT);
+            string filename = string.Format(OUTPUT_FILE_NAME, dt);
+            if (WriteCsvFile(filename, output))
+            {
+                Console.WriteLine("Success.");
+            }
+            else
+            {
+                Console.WriteLine("Failure.");
+            }
+        }
+
+        /// <summary>
+        /// ファイル読み込み処理
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public static string[]? ReadCsvFile(string filePath)
+        {
+            try
+            {
+                return File.ReadAllLines(filePath);
+            }
+            catch (FileNotFoundException ex)
+            {
+                Console.WriteLine($"例外発生：{ex.Message}");
+                Console.WriteLine("ファイルが見つからなかったため処理を中止します。");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"例外発生：{ex.Message}");
+                Console.WriteLine("ファイルの読み込みに失敗したため処理を中止します。");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// ファイル書き込み処理
+        /// </summary>
+        /// <param name="fileName"></param>
+        public static bool WriteCsvFile(string fileName, string output)
+        {
+            // 書き込み時のエラー(書き込み権限チェック)
+            try
+            {
+                File.WriteAllText(fileName, output);
+                return true;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine($"例外発生：{ex.Message}");
+                Console.WriteLine("ファイルアクセスに失敗しました。");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"例外発生：{ex.Message}");
+                Console.WriteLine("ファイルの書き込みに失敗しました。");
+                return false;
             }
         }
     }
