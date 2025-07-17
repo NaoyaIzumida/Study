@@ -1,8 +1,4 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.Text;
 
 namespace SampleApp
 {
@@ -10,52 +6,84 @@ namespace SampleApp
     {
         static void Main(string[] args)
         {
-            var list = new List<Item>();
-            var lines = File.ReadAllLines("data.csv");
-            foreach (var line in lines)
+            try
             {
-                var s = line.Split(',');
-                var item = new Item();
-                item.Name = s[0];
-                item.Category = s[1];
-                item.Quantity = int.Parse(s[2]);
-                item.Location = s[3];
-                item.Type = s[4];
-                list.Add(item);
-            }
+                string csvpath = "data.csv";
+                //csvファイル存在確認
+                if (!File.Exists(csvpath)) throw new Exception("csvファイルが見つかりません") ;
+                var list = new List<Item>();
+                var TypeList = new HashSet<string> { "A", "B", "Z" };
+                string exclusionString = "テスト";
 
-            var result = new List<Item>();
-            foreach (var item in list)
-            {
-                if (item.Type == "A" || item.Type == "B" || item.Type == "Z")
+                // CSVデータ一括読込
+                var lines = File.ReadAllLines(csvpath);
+
+                // 読込データを行単位で処理
+                list = lines.Select(x =>
                 {
-                    if (!item.Name.Contains("テスト") && item.Quantity > 0)
+                    var s = x.Split(',');
+                    int temp_Quantity;
+                    //要素数が異なる場合、エラー
+                    if (s.Length != System.Enum.GetValues(typeof(Item.ItemName)).Length) throw new Exception("csvフォーマットエラー");
+
+                    //Quantityが不正の場合、エラー
+                    if (!int.TryParse(s[(int)Item.ItemName.Quantity], out temp_Quantity)) throw new Exception("Quantityフォーマットエラー");
+                    return new Item
                     {
-                        result.Add(item);
-                    }
-                }
+                        // 各要素に設定
+                        Name = s[(int)Item.ItemName.Name],
+                        Category = s[(int)Item.ItemName.Category],
+                        Quantity = temp_Quantity,
+                        Location = s[(int)Item.ItemName.Location],
+                        Type = s[(int)Item.ItemName.Type]
+                    };
+                }).ToList();
+
+                // Typeが[A,B,Z]、かつ、Nameが[テスト]以外、かつQuantity > 0を抽出
+                list = list.Where(x =>
+                            TypeList.Contains(x.Type) && !x.Name.Contains(exclusionString) && x.Quantity > 0).ToList();
+
+                // 抽出した行のName、Category、Quantityを出力対象文字列に変換
+                var output = new StringBuilder(
+                    string.Join(Environment.NewLine,
+                        list.Select(item => $"{item.Name},{item.Category},{item.Quantity}")
+                    )
+                );
+                // 書き込み
+                File.WriteAllText(
+                    $"output_{DateTime.Now:yyyyMMddHHmmss}.csv",
+                    output.ToString()
+                );
+
+                Console.WriteLine("Done.");
             }
-
-            var output = "";
-            foreach (var item in result)
-            {
-                output += item.Name + "," + item.Category + "," + item.Quantity + Environment.NewLine;
-            }
-
-            var dt = DateTime.Now.ToString("yyyyMMddHHmmss");
-            var filename = "output_" + dt + ".csv";
-            File.WriteAllText(filename, output);
-
-            Console.WriteLine("Done.");
+            catch (Exception ex) { Console.WriteLine(ex); }
         }
 
+        /// <summary>
+        /// csvファイルの項目を表すクラス
+        /// </summary>
         class Item
         {
-            public string Name;
-            public string Category;
-            public int Quantity;
-            public string Location;
-            public string Type;
+            public enum ItemName
+            {
+                Name, Category, Quantity, Location, Type
+            }
+            public required string Name { get; set; }
+            public required string Category { get; set; }
+            public required int Quantity { get; set; }
+            public required string Location { get; set; }
+            public required string Type { get; set; }
+
+            //コンストラクタ
+            public Item()
+            {
+                Name = string.Empty;
+                Category = string.Empty;
+                Quantity = 0;
+                Location = string.Empty;
+                Type = string.Empty;
+            }
         }
     }
 }
