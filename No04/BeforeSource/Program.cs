@@ -13,16 +13,24 @@ namespace SampleApp
                 if (!File.Exists(csvpath)) throw new Exception("csvファイルが見つかりません") ;
                 var list = new List<Item>();
                 var TypeList = new HashSet<string> { "A", "B", "Z" };
+                string exclusionString = "テスト";
+
+                // CSVデータ一括読込
                 var lines = File.ReadAllLines(csvpath);
 
+                // 読込データを行単位で処理
                 list = lines.Select(x =>
                 {
                     var s = x.Split(',');
                     int temp_Quantity;
+                    //要素数が異なる場合、エラー
                     if (s.Length != System.Enum.GetValues(typeof(Item.ItemName)).Length) throw new Exception("csvフォーマットエラー");
+
+                    //Quantityが不正の場合、エラー
                     if (!int.TryParse(s[(int)Item.ItemName.Quantity], out temp_Quantity)) throw new Exception("Quantityフォーマットエラー");
                     return new Item
                     {
+                        // 各要素に設定
                         Name = s[(int)Item.ItemName.Name],
                         Category = s[(int)Item.ItemName.Category],
                         Quantity = temp_Quantity,
@@ -31,18 +39,21 @@ namespace SampleApp
                     };
                 }).ToList();
 
+                // Typeが[A,B,Z]、かつ、Nameが[テスト]以外、かつQuantity > 0を抽出
                 list = list.Where(x =>
-                            TypeList.Contains(x.Type) && !x.Name.Contains("テスト") && x.Quantity > 0).ToList();
+                            TypeList.Contains(x.Type) && !x.Name.Contains(exclusionString) && x.Quantity > 0).ToList();
 
-                var output = new StringBuilder();
-                foreach (var item in list)
-                {
-                    output.AppendLine(item.Name + "," + item.Category + "," + item.Quantity);
-                }
-
-                var filename = new StringBuilder();
-                filename.AppendFormat("output_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv");
-                File.WriteAllText(filename.ToString(), output.ToString());
+                // 抽出した行のName、Category、Quantityを出力対象文字列に変換
+                var output = new StringBuilder(
+                    string.Join(Environment.NewLine,
+                        list.Select(item => $"{item.Name},{item.Category},{item.Quantity}")
+                    )
+                );
+                // 書き込み
+                File.WriteAllText(
+                    $"output_{DateTime.Now:yyyyMMddHHmmss}.csv",
+                    output.ToString()
+                );
 
                 Console.WriteLine("Done.");
             }
